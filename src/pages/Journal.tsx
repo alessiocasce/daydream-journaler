@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import JournalHeader from '@/components/JournalHeader';
 import DailyReflection from '@/components/DailyReflection';
-import TodayGoals from '@/components/TomorrowGoals';
+import TodayGoals from '@/components/TodayGoals';
 import DailyAchievements from '@/components/DailyAchievements';
 import JournalSaveButton from '@/components/JournalSaveButton';
 import { DailyAchievement, GoalItem, JournalEntry } from '@/types/journalTypes';
