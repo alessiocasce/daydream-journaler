@@ -15,10 +15,15 @@ const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
 
   useEffect(() => {
-    // Check authentication status
+    // Check authentication status with try-catch to handle potential security errors
     const checkAuth = () => {
-      const user = localStorage.getItem('journal-user');
-      setIsAuthenticated(!!user);
+      try {
+        const user = localStorage.getItem('journal-user');
+        setIsAuthenticated(!!user);
+      } catch (error) {
+        console.error('Error checking authentication:', error);
+        setIsAuthenticated(false);
+      }
     };
     
     // Initial check

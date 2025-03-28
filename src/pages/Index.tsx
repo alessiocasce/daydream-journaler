@@ -18,13 +18,17 @@ const Index = () => {
   const [registerPassword, setRegisterPassword] = useState('');
 
   useEffect(() => {
-    // Check if already logged in
-    const user = localStorage.getItem('journal-user');
-    if (user) {
-      // Use setTimeout to avoid immediate navigation which can cause security errors
-      setTimeout(() => {
-        navigate('/journal');
-      }, 0);
+    // Check if already logged in - wrapped in a try-catch to handle security errors
+    try {
+      const user = localStorage.getItem('journal-user');
+      if (user) {
+        // Use setTimeout to avoid immediate navigation which can cause security errors
+        setTimeout(() => {
+          navigate('/journal');
+        }, 0);
+      }
+    } catch (error) {
+      console.error('Error checking authentication:', error);
     }
   }, [navigate]);
 
@@ -43,7 +47,7 @@ const Index = () => {
         // Use setTimeout to avoid immediate navigation which can cause security errors
         setTimeout(() => {
           navigate('/journal');
-        }, 0);
+        }, 100);
       } else {
         toast.error('Invalid username or password');
       }
@@ -88,10 +92,10 @@ const Index = () => {
       
       toast.success('Registration successful!');
       
-      // Use setTimeout to avoid immediate navigation which can cause security errors
+      // Use a slightly longer timeout to ensure storage events are processed
       setTimeout(() => {
         navigate('/journal');
-      }, 0);
+      }, 100);
     } catch (error) {
       console.error('Register error:', error);
       toast.error('An error occurred during registration');
