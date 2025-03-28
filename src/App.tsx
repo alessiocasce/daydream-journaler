@@ -15,8 +15,21 @@ const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
 
   useEffect(() => {
-    const user = localStorage.getItem('journal-user');
-    setIsAuthenticated(!!user);
+    // Check authentication status
+    const checkAuth = () => {
+      const user = localStorage.getItem('journal-user');
+      setIsAuthenticated(!!user);
+    };
+    
+    // Initial check
+    checkAuth();
+    
+    // Listen for storage changes (in case user logs in/out in another tab)
+    window.addEventListener('storage', checkAuth);
+    
+    return () => {
+      window.removeEventListener('storage', checkAuth);
+    };
   }, []);
 
   if (isAuthenticated === null) {

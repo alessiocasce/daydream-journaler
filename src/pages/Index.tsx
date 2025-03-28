@@ -21,7 +21,10 @@ const Index = () => {
     // Check if already logged in
     const user = localStorage.getItem('journal-user');
     if (user) {
-      navigate('/journal');
+      // Use setTimeout to avoid immediate navigation which can cause security errors
+      setTimeout(() => {
+        navigate('/journal');
+      }, 0);
     }
   }, [navigate]);
 
@@ -36,7 +39,11 @@ const Index = () => {
       if (user) {
         localStorage.setItem('journal-user', JSON.stringify({ id: user.id, username: user.username }));
         toast.success('Logged in successfully!');
-        navigate('/journal');
+        
+        // Use setTimeout to avoid immediate navigation which can cause security errors
+        setTimeout(() => {
+          navigate('/journal');
+        }, 0);
       } else {
         toast.error('Invalid username or password');
       }
@@ -80,7 +87,11 @@ const Index = () => {
       localStorage.setItem('journal-user', JSON.stringify({ id: newUser.id, username: newUser.username }));
       
       toast.success('Registration successful!');
-      navigate('/journal');
+      
+      // Use setTimeout to avoid immediate navigation which can cause security errors
+      setTimeout(() => {
+        navigate('/journal');
+      }, 0);
     } catch (error) {
       console.error('Register error:', error);
       toast.error('An error occurred during registration');
