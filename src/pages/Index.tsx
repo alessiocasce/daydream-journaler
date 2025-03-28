@@ -1,3 +1,4 @@
+
 import React, { useState, useContext, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
@@ -27,25 +28,46 @@ const Index = () => {
     }
   }, [isAuthenticated, navigate]);
 
+  const getUsers = (): User[] => {
+    if (isLocalStorageAvailable) {
+      try {
+        return JSON.parse(localStorage.getItem('journal-users') || '[]');
+      } catch (error) {
+        console.error('Error reading users from localStorage:', error);
+        return [...inMemoryUsers];
+      }
+    }
+    return [...inMemoryUsers];
+  };
+
+  const saveUsers = (users: User[]): void => {
+    if (isLocalStorageAvailable) {
+      try {
+        localStorage.setItem('journal-users', JSON.stringify(users));
+      } catch (error) {
+        console.error('Error saving users to localStorage:', error);
+        // Copy users to in-memory storage as fallback
+        inMemoryUsers.splice(0, inMemoryUsers.length, ...users);
+      }
+    } else {
+      // Use in-memory storage
+      inMemoryUsers.splice(0, inMemoryUsers.length, ...users);
+    }
+  };
+
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      let user: User | undefined;
-      
-      if (isLocalStorageAvailable) {
-        // Use localStorage when available
-        try {
-          const users: User[] = JSON.parse(localStorage.getItem('journal-users') || '[]');
-          user = users.find(u => u.username === username && u.password === password);
-        } catch (error) {
-          console.error('Error reading users from localStorage:', error);
-        }
-      } else {
-        // Use in-memory users
-        user = inMemoryUsers.find(u => u.username === username && u.password === password);
+      if (!username.trim() || !password.trim()) {
+        toast.error('Please enter both username and password');
+        setIsLoading(false);
+        return;
       }
+      
+      const users = getUsers();
+      const user = users.find(u => u.username === username && u.password === password);
 
       if (user) {
         login({ id: user.id, username: user.username });
@@ -73,24 +95,9 @@ const Index = () => {
         return;
       }
 
-      let users: User[] = [];
-      let userExists = false;
+      const users = getUsers();
       
-      if (isLocalStorageAvailable) {
-        // Use localStorage when available
-        try {
-          users = JSON.parse(localStorage.getItem('journal-users') || '[]');
-          userExists = users.some(u => u.username === registerUsername);
-        } catch (error) {
-          console.error('Error reading users from localStorage:', error);
-        }
-      } else {
-        // Use in-memory users
-        userExists = inMemoryUsers.some(u => u.username === registerUsername);
-        users = [...inMemoryUsers];
-      }
-      
-      if (userExists) {
+      if (users.some(u => u.username === registerUsername)) {
         toast.error('Username already taken');
         setIsLoading(false);
         return;
@@ -102,19 +109,8 @@ const Index = () => {
         password: registerPassword
       };
 
-      if (isLocalStorageAvailable) {
-        try {
-          users.push(newUser);
-          localStorage.setItem('journal-users', JSON.stringify(users));
-        } catch (storageError) {
-          console.error('Error saving users to localStorage:', storageError);
-          // Fall back to in-memory storage
-          inMemoryUsers.push(newUser);
-        }
-      } else {
-        // Use in-memory storage
-        inMemoryUsers.push(newUser);
-      }
+      users.push(newUser);
+      saveUsers(users);
       
       login({ id: newUser.id, username: newUser.username });
       
@@ -218,7 +214,9 @@ const Index = () => {
           </CardContent>
           <CardFooter className="flex flex-col">
             <p className="mt-2 text-xs text-center text-gray-500">
-              Your journal entries are stored locally in this browser
+              {isLocalStorageAvailable 
+                ? "Your journal entries are stored locally in this browser" 
+                : "Storage access is limited. Some features may not persist between sessions."}
             </p>
           </CardFooter>
         </Card>

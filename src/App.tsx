@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import Journal from "./pages/Journal";
 import NotFound from "./pages/NotFound";
@@ -31,13 +31,13 @@ const App = () => {
   const [inMemoryUser, setInMemoryUser] = useState<any>(null);
   const [inMemoryUsers, setInMemoryUsers] = useState<any[]>([]);
 
-  // Check if localStorage is available
+  // Check if localStorage is available without actually using it
+  // This avoids the SecurityError
   const checkLocalStorage = () => {
     try {
-      const testKey = '__test__';
-      localStorage.setItem(testKey, testKey);
-      localStorage.removeItem(testKey);
-      return true;
+      return typeof window !== 'undefined' && 
+             typeof window.localStorage !== 'undefined' && 
+             typeof window.localStorage.setItem === 'function';
     } catch (e) {
       console.warn('localStorage is not available, using in-memory storage instead');
       return false;
@@ -50,22 +50,20 @@ const App = () => {
     setIsLocalStorageAvailable(isAvailable);
     
     if (isAvailable) {
-      checkAuth();
+      try {
+        const user = localStorage.getItem('journal-user');
+        setIsAuthenticated(!!user);
+      } catch (error) {
+        console.error('Error accessing localStorage:', error);
+        setIsAuthenticated(!!inMemoryUser);
+        setIsLocalStorageAvailable(false);
+      }
+    } else {
+      setIsAuthenticated(!!inMemoryUser);
     }
+    
     setIsLoading(false);
-  }, []);
-
-  // Function to check authentication status safely
-  const checkAuth = () => {
-    try {
-      const user = localStorage.getItem('journal-user');
-      setIsAuthenticated(!!user);
-    } catch (error) {
-      console.error('Error accessing localStorage:', error);
-      setIsAuthenticated(false);
-      setIsLocalStorageAvailable(false);
-    }
-  };
+  }, [inMemoryUser]);
 
   // Authentication methods for the context
   const login = (userData: any) => {
@@ -89,7 +87,6 @@ const App = () => {
     if (isLocalStorageAvailable) {
       try {
         localStorage.removeItem('journal-user');
-        setIsAuthenticated(false);
       } catch (error) {
         console.error('Error removing from localStorage:', error);
       }
@@ -113,13 +110,13 @@ const App = () => {
         <TooltipProvider>
           <Toaster />
           <Sonner />
-          <HashRouter>
+          <BrowserRouter>
             <Routes>
               <Route path="/" element={isAuthenticated ? <Navigate to="/journal" /> : <Index />} />
               <Route path="/journal" element={isAuthenticated ? <Journal /> : <Navigate to="/" />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
-          </HashRouter>
+          </BrowserRouter>
         </TooltipProvider>
       </QueryClientProvider>
     </AuthContext.Provider>
