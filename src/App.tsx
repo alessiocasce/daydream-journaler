@@ -7,54 +7,81 @@ import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import Journal from "./pages/Journal";
 import NotFound from "./pages/NotFound";
-import { useEffect, useState } from "react";
+import { createContext, useEffect, useState } from "react";
+
+// Create an authentication context to be used across the app
+export const AuthContext = createContext<{
+  isAuthenticated: boolean;
+  login: (userData: any) => void;
+  logout: () => void;
+}>({
+  isAuthenticated: false,
+  login: () => {},
+  logout: () => {},
+});
 
 const queryClient = new QueryClient();
 
 const App = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
+  // Initialize auth state
   useEffect(() => {
-    // Check authentication status with try-catch to handle potential security errors
-    const checkAuth = () => {
-      try {
-        const user = localStorage.getItem('journal-user');
-        setIsAuthenticated(!!user);
-      } catch (error) {
-        console.error('Error checking authentication:', error);
-        setIsAuthenticated(false);
-      }
-    };
-    
-    // Initial check
     checkAuth();
-    
-    // Listen for storage changes (in case user logs in/out in another tab)
-    window.addEventListener('storage', checkAuth);
-    
-    return () => {
-      window.removeEventListener('storage', checkAuth);
-    };
+    setIsLoading(false);
   }, []);
 
-  if (isAuthenticated === null) {
-    return null; // Show nothing while checking auth status
+  // Function to check authentication status safely
+  const checkAuth = () => {
+    try {
+      const user = localStorage.getItem('journal-user');
+      setIsAuthenticated(!!user);
+    } catch (error) {
+      console.error('Error accessing localStorage:', error);
+      setIsAuthenticated(false);
+    }
+  };
+
+  // Authentication methods for the context
+  const login = (userData: any) => {
+    try {
+      localStorage.setItem('journal-user', JSON.stringify(userData));
+    } catch (error) {
+      console.error('Error saving to localStorage:', error);
+    }
+    setIsAuthenticated(true);
+  };
+
+  const logout = () => {
+    try {
+      localStorage.removeItem('journal-user');
+    } catch (error) {
+      console.error('Error removing from localStorage:', error);
+    }
+    setIsAuthenticated(false);
+  };
+
+  if (isLoading) {
+    return null; // Show nothing while initializing
   }
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <HashRouter>
-          <Routes>
-            <Route path="/" element={isAuthenticated ? <Navigate to="/journal" /> : <Index />} />
-            <Route path="/journal" element={<Journal />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </HashRouter>
-      </TooltipProvider>
-    </QueryClientProvider>
+    <AuthContext.Provider value={{ isAuthenticated, login, logout }}>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <HashRouter>
+            <Routes>
+              <Route path="/" element={isAuthenticated ? <Navigate to="/journal" /> : <Index />} />
+              <Route path="/journal" element={isAuthenticated ? <Journal /> : <Navigate to="/" />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </HashRouter>
+        </TooltipProvider>
+      </QueryClientProvider>
+    </AuthContext.Provider>
   );
 };
 

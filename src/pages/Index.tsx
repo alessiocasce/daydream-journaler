@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { Book } from 'lucide-react';
@@ -8,9 +7,11 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { User } from '@/types/journalTypes';
+import { AuthContext } from '../App';
 
 const Index = () => {
   const navigate = useNavigate();
+  const { isAuthenticated, login } = useContext(AuthContext);
   const [isLoading, setIsLoading] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -18,19 +19,10 @@ const Index = () => {
   const [registerPassword, setRegisterPassword] = useState('');
 
   useEffect(() => {
-    // Check if already logged in - wrapped in a try-catch to handle security errors
-    try {
-      const user = localStorage.getItem('journal-user');
-      if (user) {
-        // Use setTimeout to avoid immediate navigation which can cause security errors
-        setTimeout(() => {
-          navigate('/journal');
-        }, 0);
-      }
-    } catch (error) {
-      console.error('Error checking authentication:', error);
+    if (isAuthenticated) {
+      navigate('/journal');
     }
-  }, [navigate]);
+  }, [isAuthenticated, navigate]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,13 +33,9 @@ const Index = () => {
       const user = users.find(u => u.username === username && u.password === password);
 
       if (user) {
-        localStorage.setItem('journal-user', JSON.stringify({ id: user.id, username: user.username }));
+        login({ id: user.id, username: user.username });
         toast.success('Logged in successfully!');
-        
-        // Use setTimeout to avoid immediate navigation which can cause security errors
-        setTimeout(() => {
-          navigate('/journal');
-        }, 100);
+        navigate('/journal');
       } else {
         toast.error('Invalid username or password');
       }
@@ -70,7 +58,12 @@ const Index = () => {
         return;
       }
 
-      const users: User[] = JSON.parse(localStorage.getItem('journal-users') || '[]');
+      let users: User[] = [];
+      try {
+        users = JSON.parse(localStorage.getItem('journal-users') || '[]');
+      } catch (error) {
+        console.error('Error reading users from localStorage:', error);
+      }
       
       if (users.some(u => u.username === registerUsername)) {
         toast.error('Username already taken');
@@ -85,17 +78,20 @@ const Index = () => {
       };
 
       users.push(newUser);
-      localStorage.setItem('journal-users', JSON.stringify(users));
       
-      // Auto login after registration
-      localStorage.setItem('journal-user', JSON.stringify({ id: newUser.id, username: newUser.username }));
+      try {
+        localStorage.setItem('journal-users', JSON.stringify(users));
+      } catch (storageError) {
+        console.error('Error saving users to localStorage:', storageError);
+        toast.error('Could not save user data');
+        setIsLoading(false);
+        return;
+      }
+      
+      login({ id: newUser.id, username: newUser.username });
       
       toast.success('Registration successful!');
-      
-      // Use a slightly longer timeout to ensure storage events are processed
-      setTimeout(() => {
-        navigate('/journal');
-      }, 100);
+      navigate('/journal');
     } catch (error) {
       console.error('Register error:', error);
       toast.error('An error occurred during registration');
