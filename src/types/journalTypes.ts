@@ -1,8 +1,9 @@
 
-export interface DayRatingItem {
+export interface DailyAchievement {
   id: string;
   text: string;
-  type: 'good' | 'bad';
+  emoji: string;
+  completed: boolean;
 }
 
 export interface GoalItem {
@@ -16,9 +17,16 @@ export interface JournalEntry {
   date: string; // ISO string
   content: string;
   goals: GoalItem[];
-  dayRatings: DayRatingItem[];
+  achievements: DailyAchievement[];
 }
 
 export interface JournalState {
   entries: JournalEntry[];
+  defaultAchievements: DailyAchievement[];
+}
+
+export interface User {
+  id: string;
+  username: string;
+  password: string; // Note: In a real app, this should be hashed
 }
