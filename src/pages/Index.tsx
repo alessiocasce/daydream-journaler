@@ -1,4 +1,5 @@
-import React, { useState, useContext, useEffect } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { Book } from 'lucide-react';
@@ -7,67 +8,33 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { User } from '@/types/journalTypes';
-import { AuthContext } from '../App';
-
-// In-memory users backup
-const inMemoryUsers: User[] = [];
 
 const Index = () => {
   const navigate = useNavigate();
-  const { isAuthenticated, login, isLocalStorageAvailable } = useContext(AuthContext);
   const [isLoading, setIsLoading] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [registerUsername, setRegisterUsername] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
 
-  // Get access to safeStorage from window
-  const safeStorage = (window as any).safeStorage;
-
   useEffect(() => {
-    if (isAuthenticated) {
+    // Check if already logged in
+    const user = localStorage.getItem('journal-user');
+    if (user) {
       navigate('/journal');
     }
-  }, [isAuthenticated, navigate]);
-
-  const getUsers = (): User[] => {
-    const usersJson = safeStorage.getItem('journal-users');
-    if (usersJson) {
-      try {
-        return JSON.parse(usersJson);
-      } catch (error) {
-        console.error('Error parsing users JSON:', error);
-      }
-    }
-    return [...inMemoryUsers];
-  };
-
-  const saveUsers = (users: User[]): void => {
-    try {
-      safeStorage.setItem('journal-users', JSON.stringify(users));
-      // Keep our in-memory backup in sync
-      inMemoryUsers.splice(0, inMemoryUsers.length, ...users);
-    } catch (error) {
-      console.error('Error saving users:', error);
-    }
-  };
+  }, [navigate]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      if (!username.trim() || !password.trim()) {
-        toast.error('Please enter both username and password');
-        setIsLoading(false);
-        return;
-      }
-      
-      const users = getUsers();
+      const users: User[] = JSON.parse(localStorage.getItem('journal-users') || '[]');
       const user = users.find(u => u.username === username && u.password === password);
 
       if (user) {
-        login({ id: user.id, username: user.username });
+        localStorage.setItem('journal-user', JSON.stringify({ id: user.id, username: user.username }));
         toast.success('Logged in successfully!');
         navigate('/journal');
       } else {
@@ -92,7 +59,7 @@ const Index = () => {
         return;
       }
 
-      const users = getUsers();
+      const users: User[] = JSON.parse(localStorage.getItem('journal-users') || '[]');
       
       if (users.some(u => u.username === registerUsername)) {
         toast.error('Username already taken');
@@ -107,9 +74,10 @@ const Index = () => {
       };
 
       users.push(newUser);
-      saveUsers(users);
+      localStorage.setItem('journal-users', JSON.stringify(users));
       
-      login({ id: newUser.id, username: newUser.username });
+      // Auto login after registration
+      localStorage.setItem('journal-user', JSON.stringify({ id: newUser.id, username: newUser.username }));
       
       toast.success('Registration successful!');
       navigate('/journal');
@@ -211,9 +179,7 @@ const Index = () => {
           </CardContent>
           <CardFooter className="flex flex-col">
             <p className="mt-2 text-xs text-center text-gray-500">
-              {isLocalStorageAvailable 
-                ? "Your journal entries are stored locally in this browser" 
-                : "Storage access is limited. Using in-memory storage for this session."}
+              Your journal entries are stored locally in this browser
             </p>
           </CardFooter>
         </Card>
