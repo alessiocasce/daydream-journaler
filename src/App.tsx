@@ -24,76 +24,94 @@ export const AuthContext = createContext<{
 
 const queryClient = new QueryClient();
 
+// Global in-memory storage when localStorage is not available
+const inMemoryStorage = new Map<string, string>();
+
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [isLocalStorageAvailable, setIsLocalStorageAvailable] = useState<boolean>(true);
-  const [inMemoryUser, setInMemoryUser] = useState<any>(null);
+  const [isLocalStorageAvailable, setIsLocalStorageAvailable] = useState<boolean>(false);
   
-  // Check if localStorage is available without actually using it
-  // This avoids the SecurityError
-  const checkLocalStorage = () => {
-    try {
-      // Just check if the API exists without attempting to use it
-      return typeof window !== 'undefined' && 
-             typeof window.localStorage !== 'undefined' && 
-             typeof window.localStorage.setItem === 'function';
-    } catch (e) {
-      console.warn('localStorage is not available, using in-memory storage instead');
-      return false;
+  // Safe storage access
+  const safeStorage = {
+    getItem: (key: string): string | null => {
+      if (isLocalStorageAvailable) {
+        try {
+          return localStorage.getItem(key);
+        } catch (e) {
+          console.warn(`Error reading ${key} from localStorage, using in-memory fallback`);
+        }
+      }
+      return inMemoryStorage.get(key) || null;
+    },
+    
+    setItem: (key: string, value: string): void => {
+      if (isLocalStorageAvailable) {
+        try {
+          localStorage.setItem(key, value);
+          return;
+        } catch (e) {
+          console.warn(`Error writing ${key} to localStorage, using in-memory fallback`);
+        }
+      }
+      inMemoryStorage.set(key, value);
+    },
+    
+    removeItem: (key: string): void => {
+      if (isLocalStorageAvailable) {
+        try {
+          localStorage.removeItem(key);
+          return;
+        } catch (e) {
+          console.warn(`Error removing ${key} from localStorage, using in-memory fallback`);
+        }
+      }
+      inMemoryStorage.delete(key);
     }
   };
 
-  // Initialize auth state
+  // Check if localStorage is available without actually using it
   useEffect(() => {
-    const isAvailable = checkLocalStorage();
-    setIsLocalStorageAvailable(isAvailable);
-    
-    if (isAvailable) {
-      try {
-        const user = localStorage.getItem('journal-user');
-        setIsAuthenticated(!!user);
-      } catch (error) {
-        console.error('Error accessing localStorage:', error);
-        setIsAuthenticated(!!inMemoryUser);
-        setIsLocalStorageAvailable(false);
+    try {
+      // Don't attempt to use localStorage here, just check if it exists
+      const available = typeof window !== 'undefined' && 
+                        typeof window.localStorage !== 'undefined';
+      
+      // Additional checks without actually using the API
+      if (available) {
+        // Test if we're in a sandboxed environment by checking constructor
+        const testKey = '__storage_test__';
+        // Just to be extra safe, try with a minimal operation
+        localStorage.setItem(testKey, testKey);
+        localStorage.removeItem(testKey);
+        setIsLocalStorageAvailable(true);
       }
-    } else {
-      setIsAuthenticated(!!inMemoryUser);
+    } catch (e) {
+      console.warn('localStorage is not available:', e);
+      setIsLocalStorageAvailable(false);
     }
-    
+  }, []);
+
+  // Initialize auth state safely
+  useEffect(() => {
+    const user = safeStorage.getItem('journal-user');
+    setIsAuthenticated(!!user);
     setIsLoading(false);
-  }, [inMemoryUser]);
+  }, [isLocalStorageAvailable]);
 
   // Authentication methods for the context
   const login = (userData: any) => {
-    if (isLocalStorageAvailable) {
-      try {
-        localStorage.setItem('journal-user', JSON.stringify(userData));
-        setIsAuthenticated(true);
-      } catch (error) {
-        console.error('Error saving to localStorage:', error);
-        setIsLocalStorageAvailable(false);
-        setInMemoryUser(userData);
-        setIsAuthenticated(true);
-      }
-    } else {
-      setInMemoryUser(userData);
-      setIsAuthenticated(true);
-    }
+    safeStorage.setItem('journal-user', JSON.stringify(userData));
+    setIsAuthenticated(true);
   };
 
   const logout = () => {
-    if (isLocalStorageAvailable) {
-      try {
-        localStorage.removeItem('journal-user');
-      } catch (error) {
-        console.error('Error removing from localStorage:', error);
-      }
-    }
-    setInMemoryUser(null);
+    safeStorage.removeItem('journal-user');
     setIsAuthenticated(false);
   };
+
+  // Export safeStorage for use elsewhere
+  (window as any).safeStorage = safeStorage;
 
   if (isLoading) {
     return null; // Show nothing while initializing

@@ -1,4 +1,3 @@
-
 import React, { useState, useContext, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
@@ -10,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { User } from '@/types/journalTypes';
 import { AuthContext } from '../App';
 
-// Simple in-memory user store for environments without localStorage
+// In-memory users backup
 const inMemoryUsers: User[] = [];
 
 const Index = () => {
@@ -22,6 +21,9 @@ const Index = () => {
   const [registerUsername, setRegisterUsername] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
 
+  // Get access to safeStorage from window
+  const safeStorage = (window as any).safeStorage;
+
   useEffect(() => {
     if (isAuthenticated) {
       navigate('/journal');
@@ -29,29 +31,25 @@ const Index = () => {
   }, [isAuthenticated, navigate]);
 
   const getUsers = (): User[] => {
-    if (isLocalStorageAvailable) {
+    const usersJson = safeStorage.getItem('journal-users');
+    if (usersJson) {
       try {
-        const usersJson = localStorage.getItem('journal-users');
-        if (usersJson) {
-          return JSON.parse(usersJson);
-        }
+        return JSON.parse(usersJson);
       } catch (error) {
-        console.error('Error reading users from localStorage:', error);
+        console.error('Error parsing users JSON:', error);
       }
     }
     return [...inMemoryUsers];
   };
 
   const saveUsers = (users: User[]): void => {
-    if (isLocalStorageAvailable) {
-      try {
-        localStorage.setItem('journal-users', JSON.stringify(users));
-      } catch (error) {
-        console.error('Error saving users to localStorage:', error);
-      }
+    try {
+      safeStorage.setItem('journal-users', JSON.stringify(users));
+      // Keep our in-memory backup in sync
+      inMemoryUsers.splice(0, inMemoryUsers.length, ...users);
+    } catch (error) {
+      console.error('Error saving users:', error);
     }
-    // Always update in-memory as a fallback
-    inMemoryUsers.splice(0, inMemoryUsers.length, ...users);
   };
 
   const handleLogin = (e: React.FormEvent) => {
