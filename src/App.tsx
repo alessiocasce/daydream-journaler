@@ -14,10 +14,12 @@ export const AuthContext = createContext<{
   isAuthenticated: boolean;
   login: (userData: any) => void;
   logout: () => void;
+  isLocalStorageAvailable: boolean;
 }>({
   isAuthenticated: false,
   login: () => {},
   logout: () => {},
+  isLocalStorageAvailable: true,
 });
 
 const queryClient = new QueryClient();
@@ -25,10 +27,31 @@ const queryClient = new QueryClient();
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLocalStorageAvailable, setIsLocalStorageAvailable] = useState<boolean>(true);
+  const [inMemoryUser, setInMemoryUser] = useState<any>(null);
+  const [inMemoryUsers, setInMemoryUsers] = useState<any[]>([]);
+
+  // Check if localStorage is available
+  const checkLocalStorage = () => {
+    try {
+      const testKey = '__test__';
+      localStorage.setItem(testKey, testKey);
+      localStorage.removeItem(testKey);
+      return true;
+    } catch (e) {
+      console.warn('localStorage is not available, using in-memory storage instead');
+      return false;
+    }
+  };
 
   // Initialize auth state
   useEffect(() => {
-    checkAuth();
+    const isAvailable = checkLocalStorage();
+    setIsLocalStorageAvailable(isAvailable);
+    
+    if (isAvailable) {
+      checkAuth();
+    }
     setIsLoading(false);
   }, []);
 
@@ -40,25 +63,38 @@ const App = () => {
     } catch (error) {
       console.error('Error accessing localStorage:', error);
       setIsAuthenticated(false);
+      setIsLocalStorageAvailable(false);
     }
   };
 
   // Authentication methods for the context
   const login = (userData: any) => {
-    try {
-      localStorage.setItem('journal-user', JSON.stringify(userData));
-    } catch (error) {
-      console.error('Error saving to localStorage:', error);
+    if (isLocalStorageAvailable) {
+      try {
+        localStorage.setItem('journal-user', JSON.stringify(userData));
+        setIsAuthenticated(true);
+      } catch (error) {
+        console.error('Error saving to localStorage:', error);
+        setIsLocalStorageAvailable(false);
+        setInMemoryUser(userData);
+        setIsAuthenticated(true);
+      }
+    } else {
+      setInMemoryUser(userData);
+      setIsAuthenticated(true);
     }
-    setIsAuthenticated(true);
   };
 
   const logout = () => {
-    try {
-      localStorage.removeItem('journal-user');
-    } catch (error) {
-      console.error('Error removing from localStorage:', error);
+    if (isLocalStorageAvailable) {
+      try {
+        localStorage.removeItem('journal-user');
+        setIsAuthenticated(false);
+      } catch (error) {
+        console.error('Error removing from localStorage:', error);
+      }
     }
+    setInMemoryUser(null);
     setIsAuthenticated(false);
   };
 
@@ -67,7 +103,12 @@ const App = () => {
   }
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, login, logout }}>
+    <AuthContext.Provider value={{ 
+      isAuthenticated, 
+      login, 
+      logout, 
+      isLocalStorageAvailable 
+    }}>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <Toaster />

@@ -9,9 +9,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { User } from '@/types/journalTypes';
 import { AuthContext } from '../App';
 
+// Simple in-memory user store for environments without localStorage
+const inMemoryUsers: User[] = [];
+
 const Index = () => {
   const navigate = useNavigate();
-  const { isAuthenticated, login } = useContext(AuthContext);
+  const { isAuthenticated, login, isLocalStorageAvailable } = useContext(AuthContext);
   const [isLoading, setIsLoading] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -29,8 +32,20 @@ const Index = () => {
     setIsLoading(true);
 
     try {
-      const users: User[] = JSON.parse(localStorage.getItem('journal-users') || '[]');
-      const user = users.find(u => u.username === username && u.password === password);
+      let user: User | undefined;
+      
+      if (isLocalStorageAvailable) {
+        // Use localStorage when available
+        try {
+          const users: User[] = JSON.parse(localStorage.getItem('journal-users') || '[]');
+          user = users.find(u => u.username === username && u.password === password);
+        } catch (error) {
+          console.error('Error reading users from localStorage:', error);
+        }
+      } else {
+        // Use in-memory users
+        user = inMemoryUsers.find(u => u.username === username && u.password === password);
+      }
 
       if (user) {
         login({ id: user.id, username: user.username });
@@ -59,13 +74,23 @@ const Index = () => {
       }
 
       let users: User[] = [];
-      try {
-        users = JSON.parse(localStorage.getItem('journal-users') || '[]');
-      } catch (error) {
-        console.error('Error reading users from localStorage:', error);
+      let userExists = false;
+      
+      if (isLocalStorageAvailable) {
+        // Use localStorage when available
+        try {
+          users = JSON.parse(localStorage.getItem('journal-users') || '[]');
+          userExists = users.some(u => u.username === registerUsername);
+        } catch (error) {
+          console.error('Error reading users from localStorage:', error);
+        }
+      } else {
+        // Use in-memory users
+        userExists = inMemoryUsers.some(u => u.username === registerUsername);
+        users = [...inMemoryUsers];
       }
       
-      if (users.some(u => u.username === registerUsername)) {
+      if (userExists) {
         toast.error('Username already taken');
         setIsLoading(false);
         return;
@@ -77,15 +102,18 @@ const Index = () => {
         password: registerPassword
       };
 
-      users.push(newUser);
-      
-      try {
-        localStorage.setItem('journal-users', JSON.stringify(users));
-      } catch (storageError) {
-        console.error('Error saving users to localStorage:', storageError);
-        toast.error('Could not save user data');
-        setIsLoading(false);
-        return;
+      if (isLocalStorageAvailable) {
+        try {
+          users.push(newUser);
+          localStorage.setItem('journal-users', JSON.stringify(users));
+        } catch (storageError) {
+          console.error('Error saving users to localStorage:', storageError);
+          // Fall back to in-memory storage
+          inMemoryUsers.push(newUser);
+        }
+      } else {
+        // Use in-memory storage
+        inMemoryUsers.push(newUser);
       }
       
       login({ id: newUser.id, username: newUser.username });
