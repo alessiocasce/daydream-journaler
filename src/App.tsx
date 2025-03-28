@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { MemoryRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import Journal from "./pages/Journal";
 import NotFound from "./pages/NotFound";
@@ -29,12 +29,12 @@ const App = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isLocalStorageAvailable, setIsLocalStorageAvailable] = useState<boolean>(true);
   const [inMemoryUser, setInMemoryUser] = useState<any>(null);
-  const [inMemoryUsers, setInMemoryUsers] = useState<any[]>([]);
-
+  
   // Check if localStorage is available without actually using it
   // This avoids the SecurityError
   const checkLocalStorage = () => {
     try {
+      // Just check if the API exists without attempting to use it
       return typeof window !== 'undefined' && 
              typeof window.localStorage !== 'undefined' && 
              typeof window.localStorage.setItem === 'function';
@@ -110,13 +110,13 @@ const App = () => {
         <TooltipProvider>
           <Toaster />
           <Sonner />
-          <BrowserRouter>
+          <MemoryRouter initialEntries={['/']}> 
             <Routes>
               <Route path="/" element={isAuthenticated ? <Navigate to="/journal" /> : <Index />} />
               <Route path="/journal" element={isAuthenticated ? <Journal /> : <Navigate to="/" />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
-          </BrowserRouter>
+          </MemoryRouter>
         </TooltipProvider>
       </QueryClientProvider>
     </AuthContext.Provider>

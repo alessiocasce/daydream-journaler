@@ -31,10 +31,12 @@ const Index = () => {
   const getUsers = (): User[] => {
     if (isLocalStorageAvailable) {
       try {
-        return JSON.parse(localStorage.getItem('journal-users') || '[]');
+        const usersJson = localStorage.getItem('journal-users');
+        if (usersJson) {
+          return JSON.parse(usersJson);
+        }
       } catch (error) {
         console.error('Error reading users from localStorage:', error);
-        return [...inMemoryUsers];
       }
     }
     return [...inMemoryUsers];
@@ -46,13 +48,10 @@ const Index = () => {
         localStorage.setItem('journal-users', JSON.stringify(users));
       } catch (error) {
         console.error('Error saving users to localStorage:', error);
-        // Copy users to in-memory storage as fallback
-        inMemoryUsers.splice(0, inMemoryUsers.length, ...users);
       }
-    } else {
-      // Use in-memory storage
-      inMemoryUsers.splice(0, inMemoryUsers.length, ...users);
     }
+    // Always update in-memory as a fallback
+    inMemoryUsers.splice(0, inMemoryUsers.length, ...users);
   };
 
   const handleLogin = (e: React.FormEvent) => {
@@ -216,7 +215,7 @@ const Index = () => {
             <p className="mt-2 text-xs text-center text-gray-500">
               {isLocalStorageAvailable 
                 ? "Your journal entries are stored locally in this browser" 
-                : "Storage access is limited. Some features may not persist between sessions."}
+                : "Storage access is limited. Using in-memory storage for this session."}
             </p>
           </CardFooter>
         </Card>
