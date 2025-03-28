@@ -1,5 +1,5 @@
 
-import { JournalEntry, JournalState } from '@/types/journalTypes';
+import { JournalEntry, JournalState, GoalItem } from '@/types/journalTypes';
 
 const STORAGE_KEY = 'daydream-journal';
 
@@ -11,7 +11,20 @@ export const loadJournalEntries = (): JournalState => {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
-      return JSON.parse(saved);
+      const parsedData = JSON.parse(saved);
+      
+      // Handle migration from old format (string goals) to new format (GoalItem[] goals)
+      const migratedEntries = parsedData.entries.map((entry: any) => {
+        if (typeof entry.goals === 'string') {
+          return {
+            ...entry,
+            goals: entry.goals ? [{ id: Date.now().toString(), text: entry.goals, completed: false }] : []
+          };
+        }
+        return entry;
+      });
+      
+      return { entries: migratedEntries };
     }
   } catch (error) {
     console.error('Error loading journal entries:', error);

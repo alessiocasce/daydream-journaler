@@ -5,11 +5,17 @@ export interface DayRatingItem {
   type: 'good' | 'bad';
 }
 
+export interface GoalItem {
+  id: string;
+  text: string;
+  completed: boolean;
+}
+
 export interface JournalEntry {
   id: string;
   date: string; // ISO string
   content: string;
-  goals: string;
+  goals: GoalItem[];
   dayRatings: DayRatingItem[];
 }
 

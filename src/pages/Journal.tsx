@@ -3,16 +3,16 @@ import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import JournalHeader from '@/components/JournalHeader';
 import DailyReflection from '@/components/DailyReflection';
-import TomorrowGoals from '@/components/TomorrowGoals';
+import TodayGoals from '@/components/TomorrowGoals';
 import DayRating from '@/components/DayRating';
 import JournalSaveButton from '@/components/JournalSaveButton';
-import { DayRatingItem, JournalEntry } from '@/types/journalTypes';
+import { DayRatingItem, GoalItem, JournalEntry } from '@/types/journalTypes';
 import { loadJournalEntries, saveJournalEntries, getEntryByDate, saveOrUpdateEntry } from '@/services/journalService';
 
 const Journal = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [content, setContent] = useState<string>('');
-  const [goals, setGoals] = useState<string>('');
+  const [goals, setGoals] = useState<GoalItem[]>([]);
   const [dayRatings, setDayRatings] = useState<DayRatingItem[]>([]);
   const [journalState, setJournalState] = useState({ entries: [] });
 
@@ -28,12 +28,18 @@ const Journal = () => {
     
     if (entry) {
       setContent(entry.content || '');
-      setGoals(entry.goals || '');
+      // Handle both string and GoalItem[] for backward compatibility
+      if (typeof entry.goals === 'string') {
+        // Convert old string format to new GoalItem[] format if needed
+        setGoals(entry.goals ? [{ id: '1', text: entry.goals, completed: false }] : []);
+      } else {
+        setGoals(entry.goals || []);
+      }
       setDayRatings(entry.dayRatings || []);
     } else {
       // Reset fields if no entry exists for selected date
       setContent('');
-      setGoals('');
+      setGoals([]);
       setDayRatings([]);
     }
   }, [selectedDate, journalState.entries]);
@@ -58,7 +64,7 @@ const Journal = () => {
       
       <div className="space-y-6">
         <DailyReflection content={content} setContent={setContent} />
-        <TomorrowGoals goals={goals} setGoals={setGoals} />
+        <TodayGoals goals={goals} setGoals={setGoals} />
         <DayRating items={dayRatings} setItems={setDayRatings} />
         <JournalSaveButton onSave={handleSave} />
       </div>
