@@ -19,6 +19,7 @@ const Journal = () => {
     entries: [], 
     defaultAchievements: [] 
   });
+  const [isInitialLoad, setIsInitialLoad] = useState<boolean>(true);
   
   const safeStorage = useContext(StorageContext);
   const { user } = useAuth();
@@ -59,13 +60,15 @@ const Journal = () => {
           defaultAchievements: parsedData.defaultAchievements || []
         });
       }
+      setIsInitialLoad(false);
     } catch (error) {
       console.error('Error loading journal entries:', error);
       toast.error('Failed to load your journal data');
+      setIsInitialLoad(false);
     }
   }, [JOURNAL_STORAGE_KEY, safeStorage]);
 
-  // Load journal entry when selected date changes
+  // Load journal entry when selected date changes or on initial load
   useEffect(() => {
     if (!journalState.entries.length) return;
     
@@ -88,7 +91,7 @@ const Journal = () => {
       }));
       setAchievements(defaultAchievements);
     }
-  }, [selectedDate, journalState.entries, journalState.defaultAchievements]);
+  }, [selectedDate, journalState.entries, journalState.defaultAchievements, isInitialLoad]);
 
   const getEntryByDate = (entries: JournalEntry[], date: Date): JournalEntry | undefined => {
     const dateString = date.toISOString().split('T')[0];
