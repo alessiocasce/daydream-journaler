@@ -1,69 +1,87 @@
-# Welcome to your Lovable project
 
-## Project info
+# Daydream Journal Application
 
-**URL**: https://lovable.dev/projects/7992f1d5-597a-4b53-8b9d-8ed125aef45c
+This is a full-stack journal application with a React frontend and Node.js/Express backend.
 
-## How can I edit this code?
+## Project Structure
 
-There are several ways of editing your application.
+- `/src` - Frontend React application
+- `/server` - Backend Express application
 
-**Use Lovable**
+## Setup Instructions
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/7992f1d5-597a-4b53-8b9d-8ed125aef45c) and start prompting.
+### Backend Setup
 
-Changes made via Lovable will be committed automatically to this repo.
+1. Navigate to the server directory:
+```
+cd server
+```
 
-**Use your preferred IDE**
+2. Install dependencies:
+```
+npm install
+```
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+3. Make sure your MySQL server is running and you have created a database named `sito`.
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+4. Start the backend server:
+```
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+The server will run on port 5000 and automatically create the necessary database tables.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Frontend Setup
 
-**Use GitHub Codespaces**
+1. From the project root, install frontend dependencies:
+```
+npm install
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+2. Start the frontend development server:
+```
+npm run dev
+```
 
-## What technologies are used for this project?
+The frontend will run on the default Vite port (typically 5173).
 
-This project is built with .
+## Using the Application
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+1. Register a new account or use the default credentials:
+   - Username: demo
+   - Password: password123
 
-## How can I deploy this project?
+2. Create journal entries for different days
+3. Add goals and achievements
+4. Set default achievements that will appear on new days
 
-Simply open [Lovable](https://lovable.dev/projects/7992f1d5-597a-4b53-8b9d-8ed125aef45c) and click on Share -> Publish.
+## API Endpoints
 
-## I want to use a custom domain - is that possible?
+### Authentication
 
-We don't support custom domains (yet). If you want to deploy your project under your own domain then we recommend using Netlify. Visit our docs for more details: [Custom domains](https://docs.lovable.dev/tips-tricks/custom-domain/)
+- `POST /api/auth/register` - Register a new user
+- `POST /api/auth/login` - Login a user
+
+### Journal
+
+- `GET /api/journal/entries` - Get all journal entries for the logged-in user
+- `POST /api/journal/entries` - Save or update a journal entry
+- `POST /api/journal/default-achievements` - Save default achievements
+
+## Database Schema
+
+The application uses the following MySQL tables:
+
+- `users` - Store user accounts
+- `journal_entries` - Store journal entries for each user and date
+- `goals` - Store goals for each journal entry
+- `achievements` - Store achievements for each journal entry
+- `default_achievements` - Store default achievements for each user
+
+## Troubleshooting
+
+If you encounter issues connecting to the database:
+
+1. Make sure your MySQL server is running
+2. Verify the database credentials in `server/config/db.js`
+3. Check that the `sito` database exists

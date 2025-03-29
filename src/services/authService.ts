@@ -2,110 +2,89 @@
 import { LoginCredentials, RegisterCredentials, AuthResponse } from "@/types/authTypes";
 import { toast } from "sonner";
 
-// Mock API endpoint - in production, this would be your actual API
-const API_URL = "https://api.example.com";
+// Set this to your backend API URL
+const API_URL = "http://localhost:5000/api";
 
-// Function to simulate API calls with a delay
-const simulateApiCall = <T>(data: T, delay = 1000): Promise<T> => {
-  return new Promise((resolve) => {
-    setTimeout(() => resolve(data), delay);
-  });
-};
-
-// In a real app, these users would be stored in a database
-const mockUsers = [
-  {
-    id: "1",
-    username: "demo",
-    password: "password123",
-  },
-];
-
-export const login = async (credentials: LoginCredentials): Promise<AuthResponse | null> => {
-  try {
-    // In a real app, this would be an API call
-    const user = mockUsers.find(
-      (u) => u.username === credentials.username && u.password === credentials.password
-    );
-
-    if (!user) {
-      throw new Error("Invalid username or password");
-    }
-
-    // Create a token (in a real app, this would be a JWT from your server)
-    const token = btoa(JSON.stringify({ id: user.id, username: user.username }));
-
-    // Simulate API delay
-    return await simulateApiCall<AuthResponse>({
-      user: {
-        id: user.id,
-        username: user.username,
-      },
-      token,
-    });
-  } catch (error) {
-    if (error instanceof Error) {
-      toast.error(error.message);
-    } else {
-      toast.error("An unknown error occurred");
-    }
-    return null;
-  }
-};
-
+// Register a new user
 export const register = async (credentials: RegisterCredentials): Promise<AuthResponse | null> => {
   try {
-    // Check if passwords match
-    if (credentials.password !== credentials.confirmPassword) {
-      throw new Error("Passwords do not match");
-    }
-
-    // Check if username is already taken
-    if (mockUsers.some((user) => user.username === credentials.username)) {
-      throw new Error("Username already exists");
-    }
-
-    // Create a new user (in a real app, this would be saved to a database)
-    const newUser = {
-      id: (mockUsers.length + 1).toString(),
-      username: credentials.username,
-      password: credentials.password,
-    };
-
-    // Add to mock users
-    mockUsers.push(newUser);
-
-    // Create a token (in a real app, this would be a JWT from your server)
-    const token = btoa(JSON.stringify({ id: newUser.id, username: newUser.username }));
-
-    // Simulate API delay
-    return await simulateApiCall<AuthResponse>({
-      user: {
-        id: newUser.id,
-        username: newUser.username,
+    const response = await fetch(`${API_URL}/auth/register`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       },
-      token,
+      body: JSON.stringify({
+        username: credentials.username,
+        password: credentials.password,
+      }),
     });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Registration failed');
+    }
+
+    return data;
   } catch (error) {
     if (error instanceof Error) {
       toast.error(error.message);
     } else {
-      toast.error("An unknown error occurred");
+      toast.error('An unknown error occurred during registration');
     }
     return null;
   }
 };
 
+// Login user
+export const login = async (credentials: LoginCredentials): Promise<AuthResponse | null> => {
+  try {
+    const response = await fetch(`${API_URL}/auth/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        username: credentials.username,
+        password: credentials.password,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Login failed');
+    }
+
+    return data;
+  } catch (error) {
+    if (error instanceof Error) {
+      toast.error(error.message);
+    } else {
+      toast.error('An unknown error occurred during login');
+    }
+    return null;
+  }
+};
+
+// Logout user
 export const logout = (): void => {
-  // In a real app, you might need to invalidate the token on the server
-  // Here we just remove it from local storage
+  // In a real app with JWT, we just remove the token from localStorage
   localStorage.removeItem("auth_token");
 };
 
-// Parse and validate JWT token (simplified version)
+// Parse and validate JWT token
 export const parseToken = (token: string): { id: string; username: string } | null => {
   try {
-    return JSON.parse(atob(token));
+    // This is a simple decode, not a verification
+    // JWT verification is done on the server
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+
+    return JSON.parse(jsonPayload);
   } catch {
     return null;
   }

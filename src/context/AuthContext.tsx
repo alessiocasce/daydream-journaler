@@ -2,7 +2,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { AuthState, User, LoginCredentials, RegisterCredentials } from "@/types/authTypes";
 import { login, logout, register, parseToken } from "@/services/authService";
-import { StorageContext } from "@/App";
 
 // Initial auth state
 const initialState: AuthState = {
@@ -29,12 +28,11 @@ const AuthContext = createContext<AuthContextType>({
 // Auth provider component
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [state, setState] = useState<AuthState>(initialState);
-  const safeStorage = useContext(StorageContext);
 
   // Load user from storage on mount
   useEffect(() => {
     const loadUser = () => {
-      const token = safeStorage.getItem("auth_token");
+      const token = localStorage.getItem("auth_token");
       
       if (!token) {
         setState({ ...initialState, loading: false });
@@ -44,7 +42,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const userData = parseToken(token);
       
       if (!userData) {
-        safeStorage.removeItem("auth_token");
+        localStorage.removeItem("auth_token");
         setState({ ...initialState, loading: false });
         return;
       }
@@ -63,7 +61,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     loadUser();
-  }, [safeStorage]);
+  }, []);
 
   // Login handler
   const handleLogin = async (credentials: LoginCredentials): Promise<boolean> => {
@@ -73,7 +71,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     
     const { user, token } = response;
     
-    safeStorage.setItem("auth_token", token);
+    localStorage.setItem("auth_token", token);
     
     setState({
       user,
@@ -93,7 +91,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     
     const { user, token } = response;
     
-    safeStorage.setItem("auth_token", token);
+    localStorage.setItem("auth_token", token);
     
     setState({
       user,
@@ -108,7 +106,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Logout handler
   const handleLogout = () => {
     logout();
-    safeStorage.removeItem("auth_token");
+    localStorage.removeItem("auth_token");
     setState({
       user: null,
       token: null,

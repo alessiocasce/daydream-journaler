@@ -1,14 +1,14 @@
 
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect } from 'react';
 import JournalHeader from '@/components/JournalHeader';
 import DailyReflection from '@/components/DailyReflection';
 import TodayGoals from '@/components/TodayGoals';
 import DailyAchievements from '@/components/DailyAchievements';
 import JournalSaveButton from '@/components/JournalSaveButton';
 import { DailyAchievement, GoalItem, JournalEntry, JournalState } from '@/types/journalTypes';
-import { StorageContext } from '../App';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
+import { fetchJournalEntries, saveJournalEntry, saveDefaultAchievements } from '@/services/journalService';
 
 const Journal = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -20,57 +20,37 @@ const Journal = () => {
     defaultAchievements: [] 
   });
   const [isInitialLoad, setIsInitialLoad] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   
-  const safeStorage = useContext(StorageContext);
-  const { user } = useAuth();
-  
-  // Create a user-specific storage key
-  const JOURNAL_STORAGE_KEY = `daydream-journal-data-${user?.id || 'guest'}`;
+  const { user, token } = useAuth();
 
   // Load journal entries on component mount
   useEffect(() => {
-    try {
-      const savedData = safeStorage.getItem(JOURNAL_STORAGE_KEY);
-      if (savedData) {
-        const parsedData = JSON.parse(savedData);
-        
-        // Handle migration from old format if needed
-        const migratedEntries = parsedData.entries?.map((entry: any) => {
-          // Handle case when entry has old goals format
-          if (typeof entry.goals === 'string') {
-            entry.goals = entry.goals ? [{ id: Date.now().toString(), text: entry.goals, completed: false }] : [];
-          }
-          
-          // Handle case when entry doesn't have achievements
-          if (!entry.achievements) {
-            entry.achievements = [];
-          }
-          
-          // Fix date if needed (ensure it's at midnight)
-          if (entry.date) {
-            const dateOnly = entry.date.split('T')[0];
-            entry.date = `${dateOnly}T00:00:00.000Z`;
-          }
-          
-          return entry;
-        }) || [];
-        
-        setJournalState({ 
-          entries: migratedEntries,
-          defaultAchievements: parsedData.defaultAchievements || []
-        });
+    const loadJournalEntries = async () => {
+      if (!token) return;
+      
+      setIsLoading(true);
+      try {
+        const data = await fetchJournalEntries(token);
+        if (data) {
+          setJournalState(data);
+        }
+        setIsInitialLoad(false);
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error loading journal entries:', error);
+        toast.error('Failed to load your journal data');
+        setIsInitialLoad(false);
+        setIsLoading(false);
       }
-      setIsInitialLoad(false);
-    } catch (error) {
-      console.error('Error loading journal entries:', error);
-      toast.error('Failed to load your journal data');
-      setIsInitialLoad(false);
-    }
-  }, [JOURNAL_STORAGE_KEY, safeStorage]);
+    };
+
+    loadJournalEntries();
+  }, [token]);
 
   // Load journal entry when selected date changes or on initial load
   useEffect(() => {
-    if (!journalState.entries.length) return;
+    if (!journalState.entries.length || isLoading) return;
     
     const entry = getEntryByDate(journalState.entries, selectedDate);
     
@@ -91,51 +71,75 @@ const Journal = () => {
       }));
       setAchievements(defaultAchievements);
     }
-  }, [selectedDate, journalState.entries, journalState.defaultAchievements, isInitialLoad]);
+  }, [selectedDate, journalState.entries, journalState.defaultAchievements, isInitialLoad, isLoading]);
 
   const getEntryByDate = (entries: JournalEntry[], date: Date): JournalEntry | undefined => {
     const dateString = date.toISOString().split('T')[0];
     return entries.find(entry => entry.date.startsWith(dateString));
   };
 
-  const saveOrUpdateEntry = (state: JournalState, entry: JournalEntry): JournalState => {
-    const existingEntryIndex = state.entries.findIndex(e => e.date.startsWith(entry.date.split('T')[0]));
-    
-    if (existingEntryIndex >= 0) {
-      // Update existing entry
-      const updatedEntries = [...state.entries];
-      updatedEntries[existingEntryIndex] = entry;
-      return { ...state, entries: updatedEntries };
-    } else {
-      // Add new entry
-      return { ...state, entries: [...state.entries, entry] };
+  const handleSave = async () => {
+    if (!token || !user) {
+      toast.error('You must be logged in to save');
+      return;
     }
-  };
-
-  const handleSave = () => {
+    
     try {
       // Ensure we're using the current date without any timezone issues
-      const currentDate = new Date();
-      currentDate.setHours(0, 0, 0, 0);
+      const dateStr = selectedDate.toISOString().split('T')[0] + 'T00:00:00.000Z';
       
       const entry: JournalEntry = {
         id: getEntryByDate(journalState.entries, selectedDate)?.id || Date.now().toString(),
-        date: selectedDate.toISOString().split('T')[0] + 'T00:00:00.000Z',
+        date: dateStr,
         content,
         goals,
         achievements,
       };
 
-      const updatedState = saveOrUpdateEntry(journalState, entry);
-      setJournalState(updatedState);
+      const success = await saveJournalEntry(entry, token);
       
-      safeStorage.setItem(JOURNAL_STORAGE_KEY, JSON.stringify(updatedState));
-      // Toast is now handled in the JournalSaveButton component
+      if (success) {
+        // Refresh journal entries after save
+        const updatedData = await fetchJournalEntries(token);
+        if (updatedData) {
+          setJournalState(updatedData);
+        }
+      }
     } catch (error) {
       console.error('Error saving journal entry:', error);
       toast.error('Failed to save your journal entry');
     }
   };
+
+  const handleSaveDefaultAchievements = async (newDefaults: DailyAchievement[]) => {
+    if (!token || !user) {
+      toast.error('You must be logged in to save default achievements');
+      return;
+    }
+    
+    try {
+      const success = await saveDefaultAchievements(newDefaults, token);
+      
+      if (success) {
+        const updatedState = {
+          ...journalState,
+          defaultAchievements: newDefaults
+        };
+        setJournalState(updatedState);
+      }
+    } catch (error) {
+      console.error('Error saving default achievements:', error);
+      toast.error('Failed to save default achievements');
+    }
+  };
+
+  if (isLoading && isInitialLoad) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-journal-purple"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="container max-w-4xl py-8 journal-container animate-fade-in">
@@ -152,16 +156,7 @@ const Journal = () => {
           achievements={achievements} 
           setAchievements={setAchievements}
           defaultAchievements={journalState.defaultAchievements}
-          setDefaultAchievements={(newDefaults) => {
-            const updatedState = {
-              ...journalState,
-              defaultAchievements: newDefaults
-            };
-            setJournalState(updatedState);
-            
-            // Save the updated default achievements
-            safeStorage.setItem(JOURNAL_STORAGE_KEY, JSON.stringify(updatedState));
-          }}
+          setDefaultAchievements={handleSaveDefaultAchievements}
         />
         <JournalSaveButton onSave={handleSave} />
       </div>

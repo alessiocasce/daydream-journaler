@@ -10,9 +10,9 @@ interface JournalSaveButtonProps {
 const JournalSaveButton = ({ onSave }: JournalSaveButtonProps) => {
   const handleSave = () => {
     onSave();
-    // Only show the toast here, not in the parent component
+    // Show toast notification with shorter duration
     toast.success('Journal entry saved successfully!', {
-      duration: 3000, // Reduce duration to 3 seconds
+      duration: 2000, // Reduce duration to 2 seconds
     });
   };
 
