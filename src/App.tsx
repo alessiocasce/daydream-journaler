@@ -3,112 +3,77 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryRouter, Routes, Route, Navigate } from "react-router-dom";
-import Index from "./pages/Index";
+import { MemoryRouter, Routes, Route } from "react-router-dom";
 import Journal from "./pages/Journal";
 import NotFound from "./pages/NotFound";
-import { useEffect, useState } from "react";
+import { createContext } from "react";
+
+// Global in-memory storage when localStorage is not available
+const inMemoryStorage = new Map<string, string>();
+
+// Create a safe storage context
+export const StorageContext = createContext<{
+  getItem: (key: string) => string | null;
+  setItem: (key: string, value: string) => void;
+  removeItem: (key: string) => void;
+}>({
+  getItem: () => null,
+  setItem: () => {},
+  removeItem: () => {},
+});
 
 const queryClient = new QueryClient();
 
-// Safe storage implementation that falls back to in-memory storage when localStorage is not available
-const createSafeStorage = () => {
-  const memoryStorage = new Map();
-  
-  const isLocalStorageAvailable = () => {
-    try {
-      const testKey = "__test__";
-      localStorage.setItem(testKey, testKey);
-      localStorage.removeItem(testKey);
-      return true;
-    } catch (e) {
-      return false;
-    }
-  };
-  
-  return {
-    getItem: (key) => {
-      try {
-        if (isLocalStorageAvailable()) {
-          return localStorage.getItem(key);
-        }
-        return memoryStorage.get(key) || null;
-      } catch (error) {
-        console.error("Error getting item:", error);
-        return memoryStorage.get(key) || null;
-      }
-    },
-    setItem: (key, value) => {
-      try {
-        if (isLocalStorageAvailable()) {
-          localStorage.setItem(key, value);
-        }
-        memoryStorage.set(key, value);
-      } catch (error) {
-        console.error("Error setting item:", error);
-        memoryStorage.set(key, value);
-      }
-    },
-    removeItem: (key) => {
-      try {
-        if (isLocalStorageAvailable()) {
-          localStorage.removeItem(key);
-        }
-        memoryStorage.delete(key);
-      } catch (error) {
-        console.error("Error removing item:", error);
-        memoryStorage.delete(key);
-      }
-    }
-  };
-};
-
-// Create our safe storage instance
-export const safeStorage = createSafeStorage();
-
 const App = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  // Safe storage access
+  const safeStorage = {
+    getItem: (key: string): string | null => {
+      try {
+        const value = localStorage.getItem(key);
+        return value;
+      } catch (e) {
+        console.warn(`Error reading ${key} from localStorage, using in-memory fallback`);
+        return inMemoryStorage.get(key) || null;
+      }
+    },
+    
+    setItem: (key: string, value: string): void => {
+      try {
+        localStorage.setItem(key, value);
+      } catch (e) {
+        console.warn(`Error writing ${key} to localStorage, using in-memory fallback`);
+        inMemoryStorage.set(key, value);
+      }
+    },
+    
+    removeItem: (key: string): void => {
+      try {
+        localStorage.removeItem(key);
+      } catch (e) {
+        console.warn(`Error removing ${key} from localStorage, using in-memory fallback`);
+        inMemoryStorage.delete(key);
+      }
+    }
+  };
 
-  useEffect(() => {
-    // Check authentication status
-    const checkAuth = () => {
-      const user = safeStorage.getItem('journal-user');
-      setIsAuthenticated(!!user);
-    };
-    
-    // Initial check
-    checkAuth();
-    
-    // We'll use a custom event for storage changes
-    const handleStorageChange = () => {
-      checkAuth();
-    };
-    
-    window.addEventListener('journal-storage-change', handleStorageChange);
-    
-    return () => {
-      window.removeEventListener('journal-storage-change', handleStorageChange);
-    };
-  }, []);
-
-  if (isAuthenticated === null) {
-    return null; // Show nothing while checking auth status
-  }
+  // Export safeStorage for use elsewhere
+  (window as any).safeStorage = safeStorage;
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <MemoryRouter initialEntries={[isAuthenticated ? "/journal" : "/"]}>
-          <Routes>
-            <Route path="/" element={isAuthenticated ? <Navigate to="/journal" /> : <Index />} />
-            <Route path="/journal" element={<Journal />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </MemoryRouter>
-      </TooltipProvider>
-    </QueryClientProvider>
+    <StorageContext.Provider value={safeStorage}>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <MemoryRouter initialEntries={['/']}> 
+            <Routes>
+              <Route path="/" element={<Journal />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </MemoryRouter>
+        </TooltipProvider>
+      </QueryClientProvider>
+    </StorageContext.Provider>
   );
 };
 
