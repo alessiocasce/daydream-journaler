@@ -8,8 +8,7 @@ import JournalSaveButton from '@/components/JournalSaveButton';
 import { DailyAchievement, GoalItem, JournalEntry, JournalState } from '@/types/journalTypes';
 import { StorageContext } from '../App';
 import { toast } from 'sonner';
-
-const JOURNAL_STORAGE_KEY = 'daydream-journal-data';
+import { useAuth } from '@/context/AuthContext';
 
 const Journal = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -22,6 +21,10 @@ const Journal = () => {
   });
   
   const safeStorage = useContext(StorageContext);
+  const { user } = useAuth();
+  
+  // Create a user-specific storage key
+  const JOURNAL_STORAGE_KEY = `daydream-journal-data-${user?.id || 'guest'}`;
 
   // Load journal entries on component mount
   useEffect(() => {
@@ -60,7 +63,7 @@ const Journal = () => {
       console.error('Error loading journal entries:', error);
       toast.error('Failed to load your journal data');
     }
-  }, []);
+  }, [JOURNAL_STORAGE_KEY, safeStorage]);
 
   // Load journal entry when selected date changes
   useEffect(() => {
@@ -124,7 +127,7 @@ const Journal = () => {
       setJournalState(updatedState);
       
       safeStorage.setItem(JOURNAL_STORAGE_KEY, JSON.stringify(updatedState));
-      toast.success('Journal entry saved!');
+      // Toast is now handled in the JournalSaveButton component
     } catch (error) {
       console.error('Error saving journal entry:', error);
       toast.error('Failed to save your journal entry');
