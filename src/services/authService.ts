@@ -17,7 +17,6 @@ const mockUsers = [
   {
     id: "1",
     username: "demo",
-    email: "demo@example.com",
     password: "password123",
   },
 ];
@@ -41,7 +40,6 @@ export const login = async (credentials: LoginCredentials): Promise<AuthResponse
       user: {
         id: user.id,
         username: user.username,
-        email: user.email,
       },
       token,
     });
@@ -71,7 +69,6 @@ export const register = async (credentials: RegisterCredentials): Promise<AuthRe
     const newUser = {
       id: (mockUsers.length + 1).toString(),
       username: credentials.username,
-      email: credentials.email,
       password: credentials.password,
     };
 
@@ -86,7 +83,6 @@ export const register = async (credentials: RegisterCredentials): Promise<AuthRe
       user: {
         id: newUser.id,
         username: newUser.username,
-        email: newUser.email,
       },
       token,
     });
@@ -103,6 +99,7 @@ export const register = async (credentials: RegisterCredentials): Promise<AuthRe
 export const logout = (): void => {
   // In a real app, you might need to invalidate the token on the server
   // Here we just remove it from local storage
+  localStorage.removeItem("auth_token");
 };
 
 // Parse and validate JWT token (simplified version)

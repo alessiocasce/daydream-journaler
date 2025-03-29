@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { DailyAchievement } from '@/types/journalTypes';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { useAuth } from '@/context/AuthContext';
 
 interface JournalHeaderProps {
   selectedDate: Date;
@@ -18,11 +19,12 @@ interface JournalHeaderProps {
 
 const JournalHeader = ({ selectedDate, setSelectedDate, achievements = [] }: JournalHeaderProps) => {
   const navigate = useNavigate();
+  const { logout } = useAuth();
   
   const handleLogout = () => {
-    localStorage.removeItem('journal-user');
+    logout();
     toast.success('Logged out successfully');
-    navigate('/');
+    navigate('/login');
   };
 
   return (

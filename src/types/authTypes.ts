@@ -2,7 +2,6 @@
 export interface User {
   id: string;
   username: string;
-  email?: string;
   name?: string;
 }
 
@@ -20,7 +19,6 @@ export interface LoginCredentials {
 
 export interface RegisterCredentials {
   username: string;
-  email: string;
   password: string;
   confirmPassword: string;
 }
