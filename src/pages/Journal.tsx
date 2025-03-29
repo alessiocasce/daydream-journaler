@@ -8,6 +8,7 @@ import JournalSaveButton from '@/components/JournalSaveButton';
 import { DailyAchievement, GoalItem, JournalEntry } from '@/types/journalTypes';
 import { loadJournalEntries, saveJournalEntries, getEntryByDate, saveOrUpdateEntry } from '@/services/journalService';
 import { Navigate } from 'react-router-dom';
+import { safeStorage } from '@/App';
 
 const Journal = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -19,15 +20,9 @@ const Journal = () => {
 
   // Check if user is authenticated
   useEffect(() => {
-    try {
-      const user = localStorage.getItem('journal-user');
-      if (user) {
-        setIsAuthenticated(true);
-      }
-    } catch (error) {
-      console.error("Error checking authentication:", error);
-      // Consider this user as not authenticated if localStorage fails
-      setIsAuthenticated(false);
+    const user = safeStorage.getItem('journal-user');
+    if (user) {
+      setIsAuthenticated(true);
     }
   }, []);
 
@@ -35,7 +30,7 @@ const Journal = () => {
   useEffect(() => {
     if (isAuthenticated) {
       try {
-        const user = JSON.parse(localStorage.getItem('journal-user') || '{}');
+        const user = JSON.parse(safeStorage.getItem('journal-user') || '{}');
         const savedJournalState = loadJournalEntries(user.id);
         setJournalState(savedJournalState);
       } catch (error) {
@@ -85,7 +80,7 @@ const Journal = () => {
         achievements,
       };
 
-      const user = JSON.parse(localStorage.getItem('journal-user') || '{}');
+      const user = JSON.parse(safeStorage.getItem('journal-user') || '{}');
       const updatedState = saveOrUpdateEntry(journalState, entry);
       setJournalState(updatedState);
       saveJournalEntries(updatedState, user.id);
@@ -123,7 +118,7 @@ const Journal = () => {
               });
               
               // Save the updated default achievements
-              const user = JSON.parse(localStorage.getItem('journal-user') || '{}');
+              const user = JSON.parse(safeStorage.getItem('journal-user') || '{}');
               saveJournalEntries({
                 ...journalState,
                 defaultAchievements: newDefaults

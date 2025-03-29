@@ -8,6 +8,12 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { User } from '@/types/journalTypes';
+import { safeStorage } from '@/App';
+
+// Custom event to notify about storage changes
+const notifyStorageChange = () => {
+  window.dispatchEvent(new Event('journal-storage-change'));
+};
 
 const Index = () => {
   const navigate = useNavigate();
@@ -19,7 +25,7 @@ const Index = () => {
 
   useEffect(() => {
     // Check if already logged in
-    const user = localStorage.getItem('journal-user');
+    const user = safeStorage.getItem('journal-user');
     if (user) {
       // Use setTimeout to avoid immediate navigation which can cause security errors
       setTimeout(() => {
@@ -33,11 +39,13 @@ const Index = () => {
     setIsLoading(true);
 
     try {
-      const users: User[] = JSON.parse(localStorage.getItem('journal-users') || '[]');
+      const usersJson = safeStorage.getItem('journal-users') || '[]';
+      const users: User[] = JSON.parse(usersJson);
       const user = users.find(u => u.username === username && u.password === password);
 
       if (user) {
-        localStorage.setItem('journal-user', JSON.stringify({ id: user.id, username: user.username }));
+        safeStorage.setItem('journal-user', JSON.stringify({ id: user.id, username: user.username }));
+        notifyStorageChange();
         toast.success('Logged in successfully!');
         
         // Use setTimeout to avoid immediate navigation which can cause security errors
@@ -66,7 +74,8 @@ const Index = () => {
         return;
       }
 
-      const users: User[] = JSON.parse(localStorage.getItem('journal-users') || '[]');
+      const usersJson = safeStorage.getItem('journal-users') || '[]';
+      const users: User[] = JSON.parse(usersJson);
       
       if (users.some(u => u.username === registerUsername)) {
         toast.error('Username already taken');
@@ -81,10 +90,11 @@ const Index = () => {
       };
 
       users.push(newUser);
-      localStorage.setItem('journal-users', JSON.stringify(users));
+      safeStorage.setItem('journal-users', JSON.stringify(users));
       
       // Auto login after registration
-      localStorage.setItem('journal-user', JSON.stringify({ id: newUser.id, username: newUser.username }));
+      safeStorage.setItem('journal-user', JSON.stringify({ id: newUser.id, username: newUser.username }));
+      notifyStorageChange();
       
       toast.success('Registration successful!');
       
@@ -190,7 +200,7 @@ const Index = () => {
           </CardContent>
           <CardFooter className="flex flex-col">
             <p className="mt-2 text-xs text-center text-gray-500">
-              Your journal entries are stored locally in this browser
+              Your journal entries are stored securely in this browser
             </p>
           </CardFooter>
         </Card>
