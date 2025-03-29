@@ -15,7 +15,11 @@ interface DailyAchievementsProps {
   setDefaultAchievements: (achievements: DailyAchievement[]) => void;
 }
 
-const emojiOptions = ["😊", "💪", "🏃", "🧘", "💤", "🍎", "💧", "📚", "🧠", "🌱"];
+const emojiOptions = [
+  "😊", "💪", "🏃", "🧘", "💤", "🍎", "💧", "📚", "🧠", "🌱",
+  "🎯", "✅", "🌟", "💡", "🎨", "🎵", "🧹", "👨‍👩‍👧‍👦", "🌻", "🌈",
+  "🙏", "⏰", "🍵", "🥗", "💰", "📝", "🏆", "❤️", "🚶", "📱"
+];
 
 const DailyAchievements = ({ 
   achievements, 
@@ -89,7 +93,7 @@ const DailyAchievements = ({
               </Button>
             </div>
             
-            <div className="flex flex-wrap gap-2 mb-2">
+            <div className="flex flex-wrap gap-2 mb-2 max-h-32 overflow-y-auto">
               {emojiOptions.map(emoji => (
                 <Button 
                   key={emoji}

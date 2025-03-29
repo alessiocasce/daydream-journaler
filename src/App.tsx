@@ -5,8 +5,12 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import Journal from "./pages/Journal";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
 import NotFound from "./pages/NotFound";
 import { createContext } from "react";
+import PrivateRoute from "./components/PrivateRoute";
+import { AuthProvider } from "./context/AuthContext";
 
 // Global in-memory storage when localStorage is not available
 const inMemoryStorage = new Map<string, string>();
@@ -62,16 +66,24 @@ const App = () => {
   return (
     <StorageContext.Provider value={safeStorage}>
       <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <MemoryRouter initialEntries={['/']}> 
-            <Routes>
-              <Route path="/" element={<Journal />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </MemoryRouter>
-        </TooltipProvider>
+        <AuthProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <MemoryRouter initialEntries={['/']}> 
+              <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/" element={
+                  <PrivateRoute>
+                    <Journal />
+                  </PrivateRoute>
+                } />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </MemoryRouter>
+          </TooltipProvider>
+        </AuthProvider>
       </QueryClientProvider>
     </StorageContext.Provider>
   );
