@@ -1,6 +1,5 @@
 
 import React, { useState, useEffect } from 'react';
-import { format } from 'date-fns';
 import JournalHeader from '@/components/JournalHeader';
 import DailyReflection from '@/components/DailyReflection';
 import TodayGoals from '@/components/TodayGoals';
@@ -20,18 +19,30 @@ const Journal = () => {
 
   // Check if user is authenticated
   useEffect(() => {
-    const user = localStorage.getItem('journal-user');
-    if (user) {
-      setIsAuthenticated(true);
+    try {
+      const user = localStorage.getItem('journal-user');
+      if (user) {
+        setIsAuthenticated(true);
+      }
+    } catch (error) {
+      console.error("Error checking authentication:", error);
+      // Consider this user as not authenticated if localStorage fails
+      setIsAuthenticated(false);
     }
   }, []);
 
   // Load journal entries on component mount
   useEffect(() => {
     if (isAuthenticated) {
-      const user = JSON.parse(localStorage.getItem('journal-user') || '{}');
-      const savedJournalState = loadJournalEntries(user.id);
-      setJournalState(savedJournalState);
+      try {
+        const user = JSON.parse(localStorage.getItem('journal-user') || '{}');
+        const savedJournalState = loadJournalEntries(user.id);
+        setJournalState(savedJournalState);
+      } catch (error) {
+        console.error("Error loading journal entries:", error);
+        // Use empty state if loading fails
+        setJournalState({ entries: [], defaultAchievements: [] });
+      }
     }
   }, [isAuthenticated]);
 
@@ -61,22 +72,27 @@ const Journal = () => {
   }, [selectedDate, journalState.entries, journalState.defaultAchievements]);
 
   const handleSave = () => {
-    // Ensure we're using the current date without any timezone issues
-    const currentDate = new Date();
-    currentDate.setHours(0, 0, 0, 0);
-    
-    const entry: JournalEntry = {
-      id: getEntryByDate(journalState.entries, selectedDate)?.id || Date.now().toString(),
-      date: selectedDate.toISOString().split('T')[0] + 'T00:00:00.000Z',
-      content,
-      goals,
-      achievements,
-    };
+    try {
+      // Ensure we're using the current date without any timezone issues
+      const currentDate = new Date();
+      currentDate.setHours(0, 0, 0, 0);
+      
+      const entry: JournalEntry = {
+        id: getEntryByDate(journalState.entries, selectedDate)?.id || Date.now().toString(),
+        date: selectedDate.toISOString().split('T')[0] + 'T00:00:00.000Z',
+        content,
+        goals,
+        achievements,
+      };
 
-    const user = JSON.parse(localStorage.getItem('journal-user') || '{}');
-    const updatedState = saveOrUpdateEntry(journalState, entry);
-    setJournalState(updatedState);
-    saveJournalEntries(updatedState, user.id);
+      const user = JSON.parse(localStorage.getItem('journal-user') || '{}');
+      const updatedState = saveOrUpdateEntry(journalState, entry);
+      setJournalState(updatedState);
+      saveJournalEntries(updatedState, user.id);
+    } catch (error) {
+      console.error("Error saving journal entry:", error);
+      // Handle saving error - could show a toast message here
+    }
   };
 
   // Redirect to login if not authenticated
@@ -100,17 +116,21 @@ const Journal = () => {
           setAchievements={setAchievements}
           defaultAchievements={journalState.defaultAchievements}
           setDefaultAchievements={(newDefaults) => {
-            setJournalState({
-              ...journalState,
-              defaultAchievements: newDefaults
-            });
-            
-            // Save the updated default achievements
-            const user = JSON.parse(localStorage.getItem('journal-user') || '{}');
-            saveJournalEntries({
-              ...journalState,
-              defaultAchievements: newDefaults
-            }, user.id);
+            try {
+              setJournalState({
+                ...journalState,
+                defaultAchievements: newDefaults
+              });
+              
+              // Save the updated default achievements
+              const user = JSON.parse(localStorage.getItem('journal-user') || '{}');
+              saveJournalEntries({
+                ...journalState,
+                defaultAchievements: newDefaults
+              }, user.id);
+            } catch (error) {
+              console.error("Error saving default achievements:", error);
+            }
           }}
         />
         <JournalSaveButton onSave={handleSave} />
