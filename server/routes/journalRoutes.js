@@ -54,10 +54,15 @@ router.get('/entries', async (req, res) => {
         emoji: achievement.emoji,
         completed: Boolean(achievement.completed)
       }));
+
+      // Fix: Ensure proper date format
+      const formattedDate = entry.entry_date instanceof Date 
+        ? entry.entry_date.toISOString().split('T')[0] + 'T00:00:00.000Z'
+        : new Date(entry.entry_date).toISOString().split('T')[0] + 'T00:00:00.000Z';
       
       return {
         id: entry.id.toString(),
-        date: entry.entry_date.toISOString().split('T')[0] + 'T00:00:00.000Z',
+        date: formattedDate,
         content: entry.content || '',
         goals: entryGoals,
         achievements: entryAchievements
@@ -92,10 +97,15 @@ router.post('/entries', async (req, res) => {
     // Start transaction
     await connection.beginTransaction();
     
-    // Check if entry exists
+    // Fix: Properly format date to prevent timezone issues
     const dateOnly = date.split('T')[0];
+    
+    console.log('Server received date:', date);
+    console.log('Using date for DB:', dateOnly);
+    
+    // Check if entry exists
     const [existingEntries] = await connection.query(
-      'SELECT * FROM journal_entries WHERE user_id = ? AND entry_date = ?',
+      'SELECT * FROM journal_entries WHERE user_id = ? AND DATE(entry_date) = ?',
       [userId, dateOnly]
     );
     

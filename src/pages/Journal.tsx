@@ -73,9 +73,14 @@ const Journal = () => {
     }
   }, [selectedDate, journalState.entries, journalState.defaultAchievements, isInitialLoad, isLoading]);
 
+  // Fix: Properly format the date string for comparison
   const getEntryByDate = (entries: JournalEntry[], date: Date): JournalEntry | undefined => {
+    // Format date to YYYY-MM-DD for comparison
     const dateString = date.toISOString().split('T')[0];
-    return entries.find(entry => entry.date.startsWith(dateString));
+    return entries.find(entry => {
+      const entryDateStr = entry.date.split('T')[0];
+      return entryDateStr === dateString;
+    });
   };
 
   const handleSave = async () => {
@@ -85,8 +90,10 @@ const Journal = () => {
     }
     
     try {
-      // Ensure we're using the current date without any timezone issues
-      const dateStr = selectedDate.toISOString().split('T')[0] + 'T00:00:00.000Z';
+      // Fix: Create a proper date string that preserves the selected date
+      const dateObj = new Date(selectedDate);
+      // Format as YYYY-MM-DDT00:00:00.000Z to ensure correct date
+      const dateStr = dateObj.toISOString().split('T')[0] + 'T00:00:00.000Z';
       
       const entry: JournalEntry = {
         id: getEntryByDate(journalState.entries, selectedDate)?.id || Date.now().toString(),
@@ -96,6 +103,8 @@ const Journal = () => {
         achievements,
       };
 
+      console.log('Saving entry with date:', dateStr);
+      
       const success = await saveJournalEntry(entry, token);
       
       if (success) {

@@ -12,7 +12,8 @@ const JournalSaveButton = ({ onSave }: JournalSaveButtonProps) => {
     onSave();
     // Show toast notification with shorter duration
     toast.success('Journal entry saved successfully!', {
-      duration: 2000, // Reduce duration to 2 seconds
+      duration: 1500, // Reduce duration to 1.5 seconds
+      id: 'journal-save', // Add ID to prevent duplicate toasts
     });
   };
 
